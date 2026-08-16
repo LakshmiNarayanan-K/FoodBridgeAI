@@ -8,6 +8,12 @@ const ngos = [
   { name: "Annai Charitable Trust", area: "Anna Nagar", meals: "520", status: "Pending", type: "Food Distribution" },
   { name: "Share A Meal", area: "Guindy", meals: "410", status: "Active", type: "Food Rescue" },
   { name: "Care Chennai", area: "Tambaram", meals: "335", status: "Active", type: "Community Kitchen" },
+  { name: "Green Plate Initiative", area: "Mylapore", meals: "690", status: "Active", type: "Food Rescue" },
+  { name: "Anbu Food Collective", area: "Royapettah", meals: "580", status: "Active", type: "Food Distribution" },
+  { name: "Chennai Relief Kitchen", area: "Nungambakkam", meals: "845", status: "Active", type: "Community Kitchen" },
+  { name: "Namma Meals Network", area: "Perambur", meals: "460", status: "Pending", type: "NGO Partner" },
+  { name: "Urban Food Rescue", area: "Sholinganallur", meals: "720", status: "Active", type: "Food Rescue" },
+  { name: "HopeServe Foundation", area: "Chromepet", meals: "395", status: "Active", type: "Food Distribution" },
 ];
 
 export default function NGOs() {
