@@ -19,7 +19,6 @@ const donations = [
 
 export default function MyDonations() {
   const [activeStatus, setActiveStatus] = useState<Status>("All");
-
   const filteredDonations = useMemo(
     () => activeStatus === "All" ? donations : donations.filter((donation) => donation.status === activeStatus),
     [activeStatus]
@@ -30,7 +29,6 @@ export default function MyDonations() {
     { value: donations.filter((d) => d.status === "Available").length, label: "Available now" },
     { value: donations.filter((d) => d.status === "Delivered").length, label: "Delivered" },
   ];
-
   const filters: Status[] = ["All", "Available", "Reserved", "On The Way", "Delivered"];
 
   return (
@@ -58,30 +56,21 @@ export default function MyDonations() {
           <h2>Your food contributions</h2>
           <p>{filteredDonations.length} donation{filteredDonations.length === 1 ? "" : "s"} shown</p>
         </div>
-        <button className="new-donation-button" type="button" onClick={() => window.location.href = "/donate-food"}>
+        <button className="new-donation-button" type="button" onClick={() => window.location.href = "/donate"}>
           + New Donation
         </button>
       </div>
 
       <div className="donation-filters" role="tablist" aria-label="Filter donations">
         {filters.map((filter) => (
-          <button
-            key={filter}
-            type="button"
-            role="tab"
-            aria-selected={activeStatus === filter}
-            className={activeStatus === filter ? "active" : ""}
-            onClick={() => setActiveStatus(filter)}
-          >
+          <button key={filter} type="button" role="tab" aria-selected={activeStatus === filter} className={activeStatus === filter ? "active" : ""} onClick={() => setActiveStatus(filter)}>
             {filter}
           </button>
         ))}
       </div>
 
       <section className="donations-grid">
-        {filteredDonations.map((donation) => (
-          <DonationCard key={donation.id} {...donation} />
-        ))}
+        {filteredDonations.map((donation) => <DonationCard key={donation.id} {...donation} />)}
       </section>
 
       {filteredDonations.length === 0 && (
