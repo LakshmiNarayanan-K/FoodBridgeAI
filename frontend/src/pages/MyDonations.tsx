@@ -28,10 +28,11 @@ export default function MyDonations() {
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (!user.email) return;
-    fetch(`http://127.0.0.1:5000/api/food/my?email=${encodeURIComponent(user.email)}`)
+    let active = true;
+    const load = () => fetch(`http://127.0.0.1:5000/api/food/my?email=${encodeURIComponent(user.email)}`)
       .then((response) => response.json())
       .then((data) => {
-        if (!data.success || !Array.isArray(data.foods)) return;
+        if (!active || !data.success || !Array.isArray(data.foods)) return;
         const mapped = (data.foods as ApiFood[]).map((food) => ({
           id: `FD${String(food.id).padStart(4, "0")}`,
           food: food.food_name,
@@ -47,6 +48,9 @@ export default function MyDonations() {
         setDonations(mapped);
       })
       .catch(() => {});
+    load();
+    const timer = window.setInterval(load, 15000);
+    return () => { active = false; window.clearInterval(timer); };
   }, []);
 
   const filteredDonations = useMemo(() => activeStatus === "All" ? donations : donations.filter((d) => d.status === activeStatus), [activeStatus, donations]);
@@ -61,13 +65,13 @@ export default function MyDonations() {
     <main className="my-donations-page">
       <section className="donations-hero"><div><span className="donations-eyebrow">FOODBRIDGE AI • DONOR HUB</span><h1>My Donations</h1><p>Every meal you share moves surplus food safely from donor to community.</p></div><div className="hero-decoration" aria-hidden="true">🥗</div></section>
       <section className="donation-stats" aria-label="Donation summary">{stats.map((stat) => <div className="donation-stat" key={stat.label}><strong>{stat.value}</strong><span>{stat.label}</span></div>)}</section>
-      <div className="donations-toolbar"><div><h2>Your food contributions</h2><p>{filteredDonations.length} donation{filteredDonations.length === 1 ? "" : "s"} shown</p></div><button className="new-donation-button" type="button" onClick={() => window.location.href = "/donate"}>+ New Donation</button></div>
+      <div className="donations-toolbar"><div><h2>Your food contributions</h2><p>{filteredDonations.length} donation{filteredDonations.length === 1 ? "" : "s"} shown · live updates every 15 seconds</p></div><button className="new-donation-button" type="button" onClick={() => window.location.href = "/donate"}>+ New Donation</button></div>
       <div className="donation-filters" role="tablist" aria-label="Filter donations">{filters.map((filter) => <button key={filter} type="button" role="tab" aria-selected={activeStatus === filter} className={activeStatus === filter ? "active" : ""} onClick={() => setActiveStatus(filter)}>{filter}</button>)}</div>
       <section className="donations-grid">
         {filteredDonations.map((donation) => <div className="donation-card-shell" key={donation.id}>
           <DonationCard {...donation} />
           <div className={`delivery-qr-panel ${acceptedStatuses.has(donation.status) ? "active" : "locked"}`}>
-            {acceptedStatuses.has(donation.status) ? <><div><span className="qr-kicker">DELIVERY PASS</span><h3>Scan to verify pickup</h3><p>One QR opens live tracking for {donation.id} and can be scanned by the assigned delivery partner.</p></div><img src={qrUrl(donation.id, donation.qrToken)} alt={`Delivery QR for ${donation.id}`} /></> : <div><span className="qr-kicker">QR LOCKED</span><h3>Waiting for NGO acceptance</h3><p>The delivery QR activates automatically when the donation is accepted and assigned.</p></div>}
+            {acceptedStatuses.has(donation.status) ? <><div><span className="qr-kicker">DELIVERY PASS</span><h3>{donation.status === "Delivered" ? "Delivery completed" : "Scan to verify pickup"}</h3><p>{donation.status === "Delivered" ? `FoodBridge marked ${donation.id} as delivered.` : `One QR opens live tracking for ${donation.id} and can be scanned by the assigned delivery partner.`}</p></div><img src={qrUrl(donation.id, donation.qrToken)} alt={`Delivery QR for ${donation.id}`} /></> : <div><span className="qr-kicker">QR LOCKED</span><h3>Waiting for NGO acceptance</h3><p>The delivery QR activates automatically when the donation is accepted and assigned.</p></div>}
           </div>
         </div>)}
       </section>
