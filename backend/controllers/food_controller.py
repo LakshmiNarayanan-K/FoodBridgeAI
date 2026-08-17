@@ -5,7 +5,7 @@ from flask import request, jsonify, current_app
 
 from extensions import db
 from models.food import Food
-from services.telegram_service import start_order_notifications
+from services.telegram_service import start_order_notifications, send_status_notification
 
 
 def donate_food():
@@ -72,11 +72,17 @@ def update_status(food_id):
     if status not in allowed:
         return jsonify({"success": False, "message": "Invalid donation status."}), 400
 
+    previous_status = food.status
     food.status = status
-    if status == "Delivered":
-        food.delivery_person_name = data.get("delivery_person_name", food.delivery_person_name)
+    if data.get("delivery_person_name"):
+        food.delivery_person_name = data.get("delivery_person_name")
 
     db.session.commit()
+
+    # Every meaningful state transition sends an immediate Telegram message.
+    # On-The-Way additionally starts a one-minute arrival reminder loop.
+    if status != previous_status and food.receiver_telegram_chat_id:
+        send_status_notification(food, status)
 
     if status in {"Accepted", "Reserved", "Picked Up", "On The Way"} and food.receiver_telegram_chat_id:
         start_order_notifications(current_app._get_current_object(), food.id)
@@ -101,6 +107,7 @@ def assign_delivery(food_id):
     db.session.commit()
 
     if food.receiver_telegram_chat_id:
+        send_status_notification(food, food.status)
         start_order_notifications(current_app._get_current_object(), food.id)
 
     return jsonify({"success": True, "message": "Delivery assigned and QR activated.", "food": food.to_dict()}), 200
