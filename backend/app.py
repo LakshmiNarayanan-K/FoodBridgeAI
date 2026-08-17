@@ -7,6 +7,7 @@ from extensions import db, jwt, bcrypt
 
 from models.user import User
 from models.food import Food
+from models.ngo import NGOProfile
 
 from routes.auth_routes import auth_bp
 from routes.food_routes import food_bp
