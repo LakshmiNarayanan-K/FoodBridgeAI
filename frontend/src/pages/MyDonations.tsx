@@ -1,27 +1,69 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DonationCard from "../components/donations/DonationCard";
 import "./MyDonations.css";
 
-type Status = "All" | "Available" | "Reserved" | "On The Way" | "Delivered";
+type Status = "All" | "Available" | "Accepted" | "Reserved" | "Picked Up" | "On The Way" | "Delivered";
 
-const donations = [
+type ApiFood = {
+  id: number;
+  food_name: string;
+  quantity: string;
+  location: string;
+  status: string;
+  created_at: string;
+  food_image?: string | null;
+  delivery_qr_token?: string | null;
+};
+
+const fallbackDonations = [
   { id: "FD1001", food: "🍱 Idly & Sambar", quantity: "100 Meals", location: "Kundrathur, Chennai", status: "Available", date: "06 Aug 2026 | 09:30 AM", latitude: 13.0119, longitude: 80.153, image: "https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=900&q=85" },
   { id: "FD1002", food: "🍛 Veg Meals", quantity: "75 Meals", location: "Porur, Chennai", status: "Reserved", date: "06 Aug 2026 | 10:45 AM", latitude: 13.0358, longitude: 80.1561, image: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=900&q=85" },
   { id: "FD1003", food: "🥗 Fruits", quantity: "40 Packs", location: "Tambaram, Chennai", status: "Delivered", date: "05 Aug 2026 | 06:20 PM", latitude: 12.9249, longitude: 80.1275, image: "https://images.unsplash.com/photo-1619566636858-adf3ef46400b?auto=format&fit=crop&w=900&q=85" },
-  { id: "FD1004", food: "🍋 Lemon Rice", quantity: "120 Meals", location: "Guindy, Chennai", status: "Available", date: "04 Aug 2026 | 11:15 AM", latitude: 13.0067, longitude: 80.2206, image: "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=900&q=85" },
-  { id: "FD1005", food: "🍛 Biryani", quantity: "150 Meals", location: "Velachery, Chennai", status: "On The Way", date: "04 Aug 2026 | 01:30 PM", latitude: 12.9815, longitude: 80.218, image: "https://images.unsplash.com/photo-1563379926898-05f4575a45d8?auto=format&fit=crop&w=900&q=85" },
-  { id: "FD1006", food: "🥪 Sandwiches", quantity: "60 Packs", location: "Adyar, Chennai", status: "Delivered", date: "03 Aug 2026 | 09:00 AM", latitude: 13.0012, longitude: 80.2565, image: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=900&q=85" },
-  { id: "FD1007", food: "🥣 Pongal", quantity: "80 Meals", location: "Anna Nagar, Chennai", status: "Available", date: "03 Aug 2026 | 08:30 AM", latitude: 13.085, longitude: 80.2101, image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=900&q=85" },
-  { id: "FD1008", food: "🍕 Pizza", quantity: "30 Boxes", location: "T Nagar, Chennai", status: "Reserved", date: "02 Aug 2026 | 06:15 PM", latitude: 13.0418, longitude: 80.2341, image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=900&q=85" },
-  { id: "FD1009", food: "🍜 Noodles", quantity: "90 Boxes", location: "Chromepet, Chennai", status: "Delivered", date: "02 Aug 2026 | 12:00 PM", latitude: 12.9516, longitude: 80.1462, image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=85" },
-  { id: "FD1010", food: "🍞 Bread", quantity: "200 Loaves", location: "Ambattur, Chennai", status: "Available", date: "01 Aug 2026 | 07:45 AM", latitude: 13.1143, longitude: 80.1489, image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=85" },
 ];
+
+const acceptedStatuses = new Set(["Accepted", "Reserved", "Picked Up", "On The Way", "Delivered"]);
+
+function qrUrl(id: string, token?: string | null) {
+  const base = import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin;
+  const trackingUrl = `${base}/tracking/${id.replace("FD", "")}`;
+  const payload = token ? `${trackingUrl}?qr=${encodeURIComponent(token)}` : trackingUrl;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=${encodeURIComponent(payload)}`;
+}
 
 export default function MyDonations() {
   const [activeStatus, setActiveStatus] = useState<Status>("All");
+  const [donations, setDonations] = useState<typeof fallbackDonations>(fallbackDonations);
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    if (!user.email) return;
+
+    fetch(`http://127.0.0.1:5000/api/food/my?email=${encodeURIComponent(user.email)}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (!data.success || !Array.isArray(data.foods)) return;
+        const mapped = (data.foods as ApiFood[]).map((food) => ({
+          id: `FD${String(food.id).padStart(4, "0")}`,
+          food: food.food_name,
+          quantity: food.quantity,
+          location: food.location,
+          status: food.status,
+          date: food.created_at,
+          latitude: 13.0827,
+          longitude: 80.2707,
+          image: food.food_image || undefined,
+          qrToken: food.delivery_qr_token,
+        }));
+        setDonations(mapped.length ? mapped : []);
+      })
+      .catch(() => {
+        // Keep the polished fallback view if the backend is temporarily offline.
+      });
+  }, []);
+
   const filteredDonations = useMemo(
     () => activeStatus === "All" ? donations : donations.filter((donation) => donation.status === activeStatus),
-    [activeStatus]
+    [activeStatus, donations]
   );
 
   const stats = [
@@ -29,7 +71,7 @@ export default function MyDonations() {
     { value: donations.filter((d) => d.status === "Available").length, label: "Available now" },
     { value: donations.filter((d) => d.status === "Delivered").length, label: "Delivered" },
   ];
-  const filters: Status[] = ["All", "Available", "Reserved", "On The Way", "Delivered"];
+  const filters: Status[] = ["All", "Available", "Accepted", "Reserved", "Picked Up", "On The Way", "Delivered"];
 
   return (
     <main className="my-donations-page">
@@ -37,7 +79,7 @@ export default function MyDonations() {
         <div>
           <span className="donations-eyebrow">FOODBRIDGE AI • DONOR HUB</span>
           <h1>My Donations</h1>
-          <p>Every meal you share helps move surplus food to someone who needs it.</p>
+          <p>Every meal you share moves surplus food safely from donor to community.</p>
         </div>
         <div className="hero-decoration" aria-hidden="true">🥗</div>
       </section>
@@ -56,9 +98,7 @@ export default function MyDonations() {
           <h2>Your food contributions</h2>
           <p>{filteredDonations.length} donation{filteredDonations.length === 1 ? "" : "s"} shown</p>
         </div>
-        <button className="new-donation-button" type="button" onClick={() => window.location.href = "/donate"}>
-          + New Donation
-        </button>
+        <button className="new-donation-button" type="button" onClick={() => window.location.href = "/donate"}>+ New Donation</button>
       </div>
 
       <div className="donation-filters" role="tablist" aria-label="Filter donations">
@@ -70,7 +110,29 @@ export default function MyDonations() {
       </div>
 
       <section className="donations-grid">
-        {filteredDonations.map((donation) => <DonationCard key={donation.id} {...donation} />)}
+        {filteredDonations.map((donation) => (
+          <div className="donation-card-shell" key={donation.id}>
+            <DonationCard {...donation} />
+            <div className={`delivery-qr-panel ${acceptedStatuses.has(donation.status) ? "active" : "locked"}`}>
+              {acceptedStatuses.has(donation.status) ? (
+                <>
+                  <div>
+                    <span className="qr-kicker">DELIVERY PASS</span>
+                    <h3>Scan to verify pickup</h3>
+                    <p>One QR works for the assigned delivery partner and opens live tracking for {donation.id}.</p>
+                  </div>
+                  <img src={qrUrl(donation.id, (donation as typeof donation & { qrToken?: string }).qrToken)} alt={`Delivery QR for ${donation.id}`} />
+                </>
+              ) : (
+                <div>
+                  <span className="qr-kicker">QR LOCKED</span>
+                  <h3>Waiting for NGO acceptance</h3>
+                  <p>The delivery QR activates automatically when the donation is accepted and assigned.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
       </section>
 
       {filteredDonations.length === 0 && (
