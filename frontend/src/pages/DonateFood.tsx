@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import "./DonateFood.css";
+import { getFoodImage } from "../utils/foodImages";
 
 export default function DonateFood() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -9,6 +10,8 @@ export default function DonateFood() {
   const [expiryTime, setExpiryTime] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const foodImage = useMemo(() => (foodName.trim() ? getFoodImage(foodName) : ""), [foodName]);
 
   const handleDonate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,6 +26,7 @@ export default function DonateFood() {
           location,
           expiry_time: expiryTime,
           description,
+          food_image: foodImage,
           donor_name: user.full_name,
           donor_email: user.email,
         }),
@@ -39,6 +43,7 @@ export default function DonateFood() {
   return (
     <div className="donate-page">
       <div className="donate-card">
+        <div className="donate-intro-image">{foodImage ? <img src={foodImage} alt="Food preview" /> : <span>🍱</span>}</div>
         <h1 className="donate-title">🍽 Donate Food</h1>
         <p className="subtitle">Help reduce food waste by donating surplus food.</p>
         <div className="location-box">
