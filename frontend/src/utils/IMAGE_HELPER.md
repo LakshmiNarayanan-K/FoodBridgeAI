@@ -1,0 +1,1 @@
+The foodImages utility maps common food names to visual thumbnails.
