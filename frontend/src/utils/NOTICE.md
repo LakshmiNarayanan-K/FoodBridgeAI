@@ -1,0 +1,1 @@
+FoodBridge frontend image helpers live in foodImages.ts.
