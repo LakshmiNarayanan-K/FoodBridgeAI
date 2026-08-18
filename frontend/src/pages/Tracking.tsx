@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import "./Tracking.css";
 import { FaCheckCircle, FaTruck, FaBoxOpen, FaMapMarkerAlt, FaEnvelope } from "react-icons/fa";
+import { getFoodImage } from "../utils/foodImages";
 
 type Food = { id: number; food_name: string; location: string; status: string; delivery_person_name?: string | null; quantity: string; food_image?: string | null; ngo_name?: string | null; receiver_name?: string | null; receiver_email?: string | null };
 const steps = ["Accepted", "Reserved", "Picked Up", "On The Way", "Delivered"];
@@ -26,6 +27,7 @@ export default function Tracking() {
     return () => { active = false; window.clearInterval(timer); };
   }, [id]);
 
+  const image = useMemo(() => food ? (food.food_image || getFoodImage(food.food_name)) : "", [food]);
   const current = food ? steps.indexOf(food.status) : 0;
   const progress = food?.status === "Delivered" ? 100 : Math.max(4, Math.min(100, ((Math.max(current, 0) + 1) / steps.length) * 100));
 
@@ -35,7 +37,7 @@ export default function Tracking() {
         <header className="tracking-header"><div><span>FOODBRIDGE AI</span><h1>Live delivery tracking</h1></div><div className="live-indicator"><i /> LIVE</div></header>
         <div className="tracking-card">
           {error ? <div className="tracking-error">{error}</div> : <>
-            {food?.food_image && <img className="tracking-food-image" src={food.food_image} alt={food.food_name} />}
+            {image && <img className="tracking-food-image" src={image} alt={food?.food_name || "Food donation"} />}
             <div className="tracking-order-head"><div><span className="tracking-label">DONATION ID</span><h2>FD{String(food?.id || id || "").padStart(4, "0")}</h2>{food && <p><b>{food.food_name}</b> · {food.quantity}</p>}</div><span className={`tracking-status ${food?.status === "Delivered" ? "delivered" : ""}`}>{food?.status || "Loading"}</span></div>
             {food && <div className="tracking-meta"><span>📍 {food.location}</span>{food.ngo_name && <span>🏢 {food.ngo_name}</span>}{food.delivery_person_name && <span>🚚 {food.delivery_person_name}</span>}</div>}
             <div className="progress-bar"><div className="progress" style={{ width: `${progress}%` }} /></div>
