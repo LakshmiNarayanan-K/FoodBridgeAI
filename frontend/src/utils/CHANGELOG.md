@@ -1,0 +1,1 @@
+- Added automatic food imagery support for donor cards and tracking.
