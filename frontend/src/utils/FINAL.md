@@ -1,0 +1,1 @@
+FoodBridge automatic food imagery support.
