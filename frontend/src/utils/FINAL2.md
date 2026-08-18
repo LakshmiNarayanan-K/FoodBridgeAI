@@ -1,0 +1,1 @@
+Automatic images added for donation cards and tracking.
