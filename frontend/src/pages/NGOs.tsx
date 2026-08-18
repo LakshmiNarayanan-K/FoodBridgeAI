@@ -23,6 +23,7 @@ type Food = {
   quantity: string;
   location: string;
   status: string;
+  food_image?: string | null;
   delivery_qr_token?: string | null;
   delivery_person_name?: string | null;
   receiver_name?: string | null;
@@ -67,13 +68,7 @@ export default function NGOs() {
     const response = await fetch(`http://127.0.0.1:5000/api/food/assign/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ngo_name: "Akshaya Trust",
-        receiver_name: receiverName || "FoodBridge Receiver",
-        receiver_email: receiverEmail.trim(),
-        delivery_person_name: deliveryPerson || "FoodBridge Delivery Partner",
-        status: "Accepted",
-      }),
+      body: JSON.stringify({ ngo_name: "Akshaya Trust", receiver_name: receiverName || "FoodBridge Receiver", receiver_email: receiverEmail.trim(), delivery_person_name: deliveryPerson || "FoodBridge Delivery Partner", status: "Accepted" }),
     });
     const data = await response.json();
     setMessage(data.message || "Donation updated");
@@ -86,10 +81,7 @@ export default function NGOs() {
     const response = await fetch(`http://127.0.0.1:5000/api/food/status/${activated.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        status,
-        delivery_person_name: deliveryPerson || activated.delivery_person_name,
-      }),
+      body: JSON.stringify({ status, delivery_person_name: deliveryPerson || activated.delivery_person_name }),
     });
     const data = await response.json();
     setMessage(data.email_sent ? `${data.message} Email sent.` : data.message || "Status updated");
@@ -101,91 +93,37 @@ export default function NGOs() {
 
   return (
     <div className="ngos-page">
-      <header className="ngos-topbar">
-        <Link to="/dashboard" className="ngos-brand">FOODBRIDGE <span>NGO NETWORK</span></Link>
-        <div className="ngos-top-actions">
-          <span className="live-pill"><i /> VERIFIED NETWORK</span>
-          <Link to="/dashboard" className="back-link">← Dashboard</Link>
-        </div>
-      </header>
-
+      <header className="ngos-topbar"><Link to="/dashboard" className="ngos-brand">FOODBRIDGE <span>NGO NETWORK</span></Link><div className="ngos-top-actions"><span className="live-pill"><i /> VERIFIED NETWORK</span><Link to="/dashboard" className="back-link">← Dashboard</Link></div></header>
       <main className="ngos-content">
-        <div className="ngos-heading">
-          <div>
-            <span className="ngos-eyebrow">COMMUNITY PARTNER HUB</span>
-            <h1>NGO Command Center</h1>
-            <p>Accept food, activate the delivery QR and move every donation through a live delivery journey.</p>
-          </div>
-          <div className="ngos-summary"><strong>{ngos.length}</strong><span>Partner NGOs</span></div>
-        </div>
+        <div className="ngos-heading"><div><span className="ngos-eyebrow">COMMUNITY PARTNER HUB</span><h1>NGO Command Center</h1><p>Accept food, activate the delivery QR and move every donation through a live delivery journey.</p></div><div className="ngos-summary"><strong>{ngos.length}</strong><span>Partner NGOs</span></div></div>
 
         <section className="ngo-console">
-          <div className="console-intro">
-            <span className="ngos-eyebrow">DELIVERY CONTROL</span>
-            <h2>Accept & assign incoming food</h2>
-            <p>Acceptance activates the QR. Each delivery status sends a clear email update to the receiver with a live tracking link.</p>
-          </div>
-
+          <div className="console-intro"><span className="ngos-eyebrow">DELIVERY CONTROL</span><h2>Accept & assign incoming food</h2><p>Acceptance activates the QR. Each delivery status sends a clear email update to the receiver with a live tracking link.</p></div>
           <div className="ngo-console-fields">
             <label><span>Receiver name</span><input placeholder="e.g. Lakshman" value={receiverName} onChange={(e) => setReceiverName(e.target.value)} /></label>
             <label><span>Receiver email</span><input type="email" placeholder="receiver@example.com" value={receiverEmail} onChange={(e) => setReceiverEmail(e.target.value)} /></label>
             <label><span>Delivery partner</span><input placeholder="e.g. Arun" value={deliveryPerson} onChange={(e) => setDeliveryPerson(e.target.value)} /></label>
           </div>
-
           {message && <div className="ngo-console-message">✓ {message}</div>}
 
           {activated && (
             <div className="activated-pass">
               <div className="activated-details">
-                <span className="activated-label">ACTIVE DELIVERY</span>
-                <b>FD{String(activated.id).padStart(4, "0")} · {activated.status}</b>
-                <span>{activated.delivery_person_name || "Delivery partner"} · {activated.receiver_name || "Receiver"}</span>
-                {activated.receiver_email && <span>✉ {activated.receiver_email}</span>}
-                <div className="delivery-status-actions">
-                  {statusFlow.map((status, index) => (
-                    <button key={status} type="button" disabled={index !== currentIndex + 1 || activated.status === "Delivered"} onClick={() => updateDeliveryStatus(status)}>{status}</button>
-                  ))}
-                </div>
+                {activated.food_image && <img className="food-preview" src={activated.food_image} alt={activated.food_name} />}
+                <div><span className="activated-label">ACTIVE DELIVERY</span><b>FD{String(activated.id).padStart(4, "0")} · {activated.status}</b><span>{activated.food_name} · {activated.quantity}</span><span>{activated.delivery_person_name || "Delivery partner"} · {activated.receiver_name || "Receiver"}</span>{activated.receiver_email && <span>✉ {activated.receiver_email}</span>}</div>
+                <div className="delivery-status-actions">{statusFlow.map((status, index) => <button key={status} type="button" disabled={index !== currentIndex + 1 || activated.status === "Delivered"} onClick={() => updateDeliveryStatus(status)}>{status}</button>)}</div>
               </div>
-              <div className="qr-stack">
-                <img src={qrUrl(activated.id, activated.delivery_qr_token)} alt={`Live tracking QR for FD${activated.id}`} />
-                <strong>Scan to track</strong>
-                <small>Opens FoodBridge live tracking</small>
-                <a href={trackingUrl} target="_blank" rel="noreferrer">Open tracking →</a>
-              </div>
+              <div className="qr-stack"><img src={qrUrl(activated.id, activated.delivery_qr_token)} alt={`Live tracking QR for FD${activated.id}`} /><strong>Scan to track</strong><small>Opens FoodBridge live tracking</small><a href={trackingUrl} target="_blank" rel="noreferrer">Open tracking →</a></div>
             </div>
           )}
 
           <div className="incoming-list">
-            {incoming.length ? incoming.map((food) => (
-              <div className="incoming-item" key={food.id}>
-                <div>
-                  <b>FD{String(food.id).padStart(4, "0")} · {food.food_name}</b>
-                  <span>{food.quantity} · {food.location}</span>
-                </div>
-                <button type="button" onClick={() => acceptDonation(food.id)}>Accept & Activate QR</button>
-              </div>
-            )) : <p className="no-incoming">No available donations waiting for acceptance.</p>}
+            {incoming.length ? incoming.map((food) => <div className="incoming-item" key={food.id}>{food.food_image ? <img className="incoming-thumb" src={food.food_image} alt="" /> : <div className="incoming-thumb placeholder">🍱</div>}<div className="incoming-info"><b>FD{String(food.id).padStart(4, "0")} · {food.food_name}</b><span>{food.quantity} · {food.location}</span></div><button type="button" onClick={() => acceptDonation(food.id)}>Accept & Activate QR</button></div>) : <p className="no-incoming">No available donations waiting for acceptance.</p>}
           </div>
         </section>
 
-        <section className="ngos-toolbar">
-          <div className="ngos-search">⌕ <span>Search NGOs or Chennai locations...</span></div>
-          <button type="button">All Partners ▾</button>
-        </section>
-
-        <section className="ngo-grid">
-          {ngos.map((ngo) => (
-            <article className="ngo-card" key={ngo.name}>
-              <div className="ngo-card-top"><div className="ngo-logo">{ngo.name.charAt(0)}</div><span className={`ngo-status ${ngo.status.toLowerCase()}`}><i /> {ngo.status}</span></div>
-              <span className="ngo-type">{ngo.type}</span>
-              <h2>{ngo.name}</h2>
-              <p className="ngo-location">⌖ {ngo.area}, Chennai</p>
-              <div className="ngo-stats"><div><strong>{ngo.meals}</strong><span>Meals served</span></div><div><strong>24/7</strong><span>Response</span></div></div>
-              <button className="ngo-view" type="button">View Partner →</button>
-            </article>
-          ))}
-        </section>
+        <section className="ngos-toolbar"><div className="ngos-search">⌕ <span>Search NGOs or Chennai locations...</span></div><button type="button">All Partners ▾</button></section>
+        <section className="ngo-grid">{ngos.map((ngo) => <article className="ngo-card" key={ngo.name}><div className="ngo-card-top"><div className="ngo-logo">{ngo.name.charAt(0)}</div><span className={`ngo-status ${ngo.status.toLowerCase()}`}><i /> {ngo.status}</span></div><span className="ngo-type">{ngo.type}</span><h2>{ngo.name}</h2><p className="ngo-location">⌖ {ngo.area}, Chennai</p><div className="ngo-stats"><div><strong>{ngo.meals}</strong><span>Meals served</span></div><div><strong>24/7</strong><span>Response</span></div></div><button className="ngo-view" type="button">View Partner →</button></article>)}</section>
       </main>
     </div>
   );
