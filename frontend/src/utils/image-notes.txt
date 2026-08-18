@@ -1,0 +1,1 @@
+Automatic food imagery is selected by frontend/src/utils/foodImages.ts.
