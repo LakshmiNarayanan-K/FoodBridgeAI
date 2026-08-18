@@ -20,6 +20,7 @@ class Food(db.Model):
 
     ngo_name = db.Column(db.String(120), nullable=True)
     receiver_name = db.Column(db.String(120), nullable=True)
+    receiver_email = db.Column(db.String(120), nullable=True)
     receiver_telegram_chat_id = db.Column(db.String(100), nullable=True)
     delivery_person_name = db.Column(db.String(120), nullable=True)
     delivery_qr_token = db.Column(db.String(120), nullable=True, unique=True)
@@ -45,6 +46,7 @@ class Food(db.Model):
             "status": self.status,
             "ngo_name": self.ngo_name,
             "receiver_name": self.receiver_name,
+            "receiver_email": self.receiver_email,
             "receiver_telegram_chat_id": self.receiver_telegram_chat_id,
             "delivery_person_name": self.delivery_person_name,
             "delivery_qr_token": self.delivery_qr_token,

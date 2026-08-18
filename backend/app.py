@@ -31,7 +31,7 @@ def home():
 
 
 def ensure_sqlite_columns():
-    """Keep existing local SQLite databases compatible after adding delivery features."""
+    """Keep existing local SQLite databases compatible with new delivery fields."""
     if not str(app.config.get("SQLALCHEMY_DATABASE_URI", "")).startswith("sqlite"):
         return
 
@@ -41,6 +41,7 @@ def ensure_sqlite_columns():
 
     existing = {column["name"] for column in inspector.get_columns("foods")}
     additions = {
+        "receiver_email": "VARCHAR(120)",
         "receiver_telegram_chat_id": "VARCHAR(100)",
         "delivery_person_name": "VARCHAR(120)",
         "delivery_qr_token": "VARCHAR(120)",

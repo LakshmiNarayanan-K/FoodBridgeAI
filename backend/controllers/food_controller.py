@@ -1,11 +1,14 @@
 from datetime import datetime
 from uuid import uuid4
 
-from flask import request, jsonify, current_app
+from flask import request, jsonify
 
 from extensions import db
 from models.food import Food
-from services.telegram_service import start_order_notifications, send_status_notification
+from services.email_service import send_status_email
+
+
+ALLOWED_STATUSES = {"Available", "Accepted", "Reserved", "Picked Up", "On The Way", "Delivered", "Cancelled"}
 
 
 def donate_food():
@@ -68,8 +71,7 @@ def update_status(food_id):
 
     data = request.get_json() or {}
     status = data.get("status")
-    allowed = {"Available", "Accepted", "Reserved", "Picked Up", "On The Way", "Delivered", "Cancelled"}
-    if status not in allowed:
+    if status not in ALLOWED_STATUSES:
         return jsonify({"success": False, "message": "Invalid donation status."}), 400
 
     previous_status = food.status
@@ -79,15 +81,16 @@ def update_status(food_id):
 
     db.session.commit()
 
-    # Every meaningful state transition sends an immediate Telegram message.
-    # On-The-Way additionally starts a one-minute arrival reminder loop.
-    if status != previous_status and food.receiver_telegram_chat_id:
-        send_status_notification(food, status)
+    email_sent = False
+    if status != previous_status and food.receiver_email:
+        email_sent = send_status_email(food, status)
 
-    if status in {"Accepted", "Reserved", "Picked Up", "On The Way"} and food.receiver_telegram_chat_id:
-        start_order_notifications(current_app._get_current_object(), food.id)
-
-    return jsonify({"success": True, "message": "Status updated successfully.", "food": food.to_dict()})
+    return jsonify({
+        "success": True,
+        "message": "Status updated successfully." if not email_sent else "Status updated and email notification sent.",
+        "email_sent": email_sent,
+        "food": food.to_dict(),
+    })
 
 
 def assign_delivery(food_id):
@@ -96,21 +99,34 @@ def assign_delivery(food_id):
         return jsonify({"success": False, "message": "Donation not found."}), 404
 
     data = request.get_json() or {}
+    status = data.get("status", "Accepted")
+    if status not in ALLOWED_STATUSES:
+        return jsonify({"success": False, "message": "Invalid delivery status."}), 400
+
     food.ngo_name = data.get("ngo_name", food.ngo_name)
     food.receiver_name = data.get("receiver_name", food.receiver_name)
-    food.receiver_telegram_chat_id = data.get("telegram_chat_id", food.receiver_telegram_chat_id)
+    food.receiver_email = data.get("receiver_email", food.receiver_email)
     food.delivery_person_name = data.get("delivery_person_name", food.delivery_person_name)
-    food.status = data.get("status", "Accepted")
+    food.status = status
     food.accepted_at = datetime.utcnow()
     food.delivery_qr_token = food.delivery_qr_token or uuid4().hex
 
     db.session.commit()
 
-    if food.receiver_telegram_chat_id:
-        send_status_notification(food, food.status)
-        start_order_notifications(current_app._get_current_object(), food.id)
+    email_sent = bool(food.receiver_email and send_status_email(food, food.status))
+    if email_sent:
+        message = "Delivery assigned, QR activated and email notification sent."
+    elif food.receiver_email:
+        message = "Delivery assigned and QR activated, but email could not be sent. Check SMTP settings."
+    else:
+        message = "Delivery assigned and QR activated. Add a receiver email to enable notifications."
 
-    return jsonify({"success": True, "message": "Delivery assigned and QR activated.", "food": food.to_dict()}), 200
+    return jsonify({
+        "success": True,
+        "message": message,
+        "email_sent": email_sent,
+        "food": food.to_dict(),
+    }), 200
 
 
 def add_review(food_id):
