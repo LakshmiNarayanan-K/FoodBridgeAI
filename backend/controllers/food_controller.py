@@ -1,11 +1,11 @@
 from datetime import datetime
 from uuid import uuid4
 
-from flask import request, jsonify, current_app
+from flask import request, jsonify
 
 from extensions import db
 from models.food import Food
-from services.telegram_service import start_order_notifications, send_status_notification
+from services.email_service import send_status_email
 
 
 def donate_food():
@@ -79,15 +79,16 @@ def update_status(food_id):
 
     db.session.commit()
 
-    # Every meaningful state transition sends an immediate Telegram message.
-    # On-The-Way additionally starts a one-minute arrival reminder loop.
-    if status != previous_status and food.receiver_telegram_chat_id:
-        send_status_notification(food, status)
+    email_sent = False
+    if status != previous_status and food.receiver_email:
+        email_sent = send_status_email(food, status)
 
-    if status in {"Accepted", "Reserved", "Picked Up", "On The Way"} and food.receiver_telegram_chat_id:
-        start_order_notifications(current_app._get_current_object(), food.id)
-
-    return jsonify({"success": True, "message": "Status updated successfully.", "food": food.to_dict()})
+    return jsonify({
+        "success": True,
+        "message": "Status updated successfully.",
+        "email_sent": email_sent,
+        "food": food.to_dict(),
+    })
 
 
 def assign_delivery(food_id):
@@ -98,7 +99,7 @@ def assign_delivery(food_id):
     data = request.get_json() or {}
     food.ngo_name = data.get("ngo_name", food.ngo_name)
     food.receiver_name = data.get("receiver_name", food.receiver_name)
-    food.receiver_telegram_chat_id = data.get("telegram_chat_id", food.receiver_telegram_chat_id)
+    food.receiver_email = data.get("receiver_email", food.receiver_email)
     food.delivery_person_name = data.get("delivery_person_name", food.delivery_person_name)
     food.status = data.get("status", "Accepted")
     food.accepted_at = datetime.utcnow()
@@ -106,11 +107,16 @@ def assign_delivery(food_id):
 
     db.session.commit()
 
-    if food.receiver_telegram_chat_id:
-        send_status_notification(food, food.status)
-        start_order_notifications(current_app._get_current_object(), food.id)
+    email_sent = False
+    if food.receiver_email:
+        email_sent = send_status_email(food, food.status)
 
-    return jsonify({"success": True, "message": "Delivery assigned and QR activated.", "food": food.to_dict()}), 200
+    return jsonify({
+        "success": True,
+        "message": "Delivery assigned, QR activated and email notification sent." if email_sent else "Delivery assigned and QR activated. Add a valid receiver email to enable notifications.",
+        "email_sent": email_sent,
+        "food": food.to_dict(),
+    }), 200
 
 
 def add_review(food_id):
