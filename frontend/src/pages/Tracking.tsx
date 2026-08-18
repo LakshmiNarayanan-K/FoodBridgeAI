@@ -1,43 +1,83 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import "./Tracking.css";
-import { FaCheckCircle, FaTruck, FaBoxOpen, FaMapMarkerAlt } from "react-icons/fa";
+import { FaCheckCircle, FaTruck, FaBoxOpen, FaMapMarkerAlt, FaEnvelope } from "react-icons/fa";
 
-type Food = { id: number; food_name: string; location: string; status: string; delivery_person_name?: string | null; quantity: string; ngo_name?: string | null; receiver_name?: string | null };
+type Food = {
+  id: number;
+  food_name: string;
+  location: string;
+  status: string;
+  delivery_person_name?: string | null;
+  quantity: string;
+  ngo_name?: string | null;
+  receiver_name?: string | null;
+  receiver_email?: string | null;
+};
+
 const steps = ["Accepted", "Reserved", "Picked Up", "On The Way", "Delivered"];
 
 export default function Tracking() {
   const { id } = useParams();
   const [food, setFood] = useState<Food | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!id) return;
     let active = true;
     const load = () => fetch(`http://127.0.0.1:5000/api/food/${Number(id)}`)
       .then((r) => r.json())
-      .then((data) => { if (active && data.success) setFood(data.food); })
-      .catch(() => {});
+      .then((data) => {
+        if (!active) return;
+        if (data.success) { setFood(data.food); setError(""); }
+        else setError(data.message || "Donation not found.");
+      })
+      .catch(() => active && setError("Unable to reach FoodBridge right now."));
     load();
-    const timer = window.setInterval(load, 15000);
+    const timer = window.setInterval(load, 10000);
     return () => { active = false; window.clearInterval(timer); };
   }, [id]);
 
   const current = food ? steps.indexOf(food.status) : 0;
-  const progress = food?.status === "Delivered" ? 100 : Math.max(0, Math.min(100, ((Math.max(current, 0) + 1) / steps.length) * 100));
+  const progress = food?.status === "Delivered" ? 100 : Math.max(4, Math.min(100, ((Math.max(current, 0) + 1) / steps.length) * 100));
 
   return (
     <div className="tracking-container">
-      <h1>🚚 Live Donation Tracking</h1>
-      <div className="tracking-card">
-        <h2>Donation ID : {food ? `FD${String(food.id).padStart(4, "0")}` : `FD${String(id || "").padStart(4, "0")}`}</h2>
-        {food ? <><p><b>{food.food_name}</b> · {food.quantity}</p><p>📍 {food.location}{food.ngo_name ? ` · ${food.ngo_name}` : ""}</p>{food.receiver_name && <p>Receiver: <b>{food.receiver_name}</b></p>}</> : <p>Loading live order details...</p>}
-        <div className="progress-bar"><div className="progress" style={{ width: `${progress}%` }} /></div>
-        <p className="eta">Status: <b>{food?.status || "Loading"}</b> <span style={{ marginLeft: 8 }}>• live</span></p>
-        {food?.delivery_person_name && <p className="eta">Delivery partner: <b>{food.delivery_person_name}</b></p>}
-        <div className="timeline">
-          {steps.map((step, index) => <div className={`step ${index < current || food?.status === "Delivered" ? "completed" : index === current ? "active" : ""}`} key={step}>{index < current || food?.status === "Delivered" ? <FaCheckCircle /> : index === 2 ? <FaBoxOpen /> : index === 3 ? <FaTruck /> : <FaMapMarkerAlt />}<span>{step}</span></div>)}
+      <div className="tracking-shell">
+        <header className="tracking-header">
+          <div><span>FOODBRIDGE AI</span><h1>Live delivery tracking</h1></div>
+          <div className="live-indicator"><i /> LIVE</div>
+        </header>
+
+        <div className="tracking-card">
+          {error ? <div className="tracking-error">{error}</div> : (
+            <>
+              <div className="tracking-order-head">
+                <div>
+                  <span className="tracking-label">DONATION ID</span>
+                  <h2>FD{String(food?.id || id || "").padStart(4, "0")}</h2>
+                  {food && <p><b>{food.food_name}</b> · {food.quantity}</p>}
+                </div>
+                <span className={`tracking-status ${food?.status === "Delivered" ? "delivered" : ""}`}>{food?.status || "Loading"}</span>
+              </div>
+
+              {food && <div className="tracking-meta"><span>📍 {food.location}</span>{food.ngo_name && <span>🏢 {food.ngo_name}</span>}{food.delivery_person_name && <span>🚚 {food.delivery_person_name}</span>}</div>}
+
+              <div className="progress-bar"><div className="progress" style={{ width: `${progress}%` }} /></div>
+              <p className="eta">{food?.status === "Delivered" ? "Delivery completed" : food?.status === "On The Way" ? "Your food is on the way" : `Current status: ${food?.status || "Loading"}`}</p>
+
+              <div className="timeline">
+                {steps.map((step, index) => <div className={`step ${index < current || food?.status === "Delivered" ? "completed" : index === current ? "active" : ""}`} key={step}>
+                  <span className="step-icon">{index < current || food?.status === "Delivered" ? <FaCheckCircle /> : index === 2 ? <FaBoxOpen /> : index === 3 ? <FaTruck /> : <FaMapMarkerAlt />}</span>
+                  <span>{step}</span>
+                </div>)}
+              </div>
+
+              {food?.receiver_email && <div className="email-alert"><FaEnvelope /><div><strong>Email updates enabled</strong><span>Status updates are sent to {food.receiver_email}</span></div></div>}
+              <small className="refresh-note">Live status refreshes automatically every 10 seconds.</small>
+            </>
+          )}
         </div>
-        <small>Live status refreshes automatically every 15 seconds.</small>
       </div>
     </div>
   );
