@@ -1,0 +1,2 @@
+import "./Founder.css";
+export default function Founder(){return <main className="founder-page"><section className="founder-card"><span>FOODBRIDGE AI</span><div className="founder-avatar">LN</div><h1>Building technology for a more responsible food chain.</h1><p>FoodBridge is designed as a student-built full-stack platform that makes surplus food redistribution visible, trackable and easier to coordinate.</p><div className="founder-points"><b>Product thinking</b><b>Full-stack engineering</b><b>Community impact</b></div></section></main>}
