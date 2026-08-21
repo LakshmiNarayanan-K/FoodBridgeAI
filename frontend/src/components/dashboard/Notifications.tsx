@@ -1,68 +1,49 @@
-const notifications = [
-  {
-    icon: "🍱",
-    title: "New food donation received",
-    description: "100 meals are available in Kundrathur.",
-    time: "2 min ago",
-    type: "new",
-  },
-  {
-    icon: "🏢",
-    title: "NGO accepted your donation",
-    description: "Helping Hands NGO accepted FD1025.",
-    time: "18 min ago",
-    type: "success",
-  },
-  {
-    icon: "🚚",
-    title: "Delivery scheduled",
-    description: "Volunteer pickup scheduled for 11:30 AM.",
-    time: "32 min ago",
-    type: "warning",
-  },
-];
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+
+type Notice = { id: string; title: string; description: string; time: string; type: string };
 
 export default function Notifications() {
+  const [notifications, setNotifications] = useState<Notice[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      let user: { email?: string } = {};
+      try { user = JSON.parse(localStorage.getItem("user") || "{}"); } catch { user = {}; }
+      if (!user.email) { setLoading(false); return; }
+      try {
+        const res = await fetch(`http://127.0.0.1:5000/api/food/notifications?email=${encodeURIComponent(user.email)}`);
+        const data = await res.json();
+        if (active && data.success) setNotifications(data.notifications || []);
+      } catch { /* dashboard remains usable even if backend is offline */ }
+      finally { if (active) setLoading(false); }
+    };
+    load();
+    const timer = window.setInterval(load, 10000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, []);
+
+  const latest = notifications.slice(0, 3);
+
   return (
     <div className="notifications-container">
-
       <div className="notification-list">
-
-        {notifications.map((notification) => (
-          <div
-            className="notification-item"
-            key={notification.title}
-          >
-
-            <div className={`notification-icon ${notification.type}`}>
-              {notification.icon}
-            </div>
-
+        {loading && <div className="notification-item"><div className="notification-icon new">…</div><div className="notification-content"><strong>Loading live updates</strong><p>Checking the latest FoodBridge activity.</p></div></div>}
+        {!loading && latest.length === 0 && <div className="notification-item"><div className="notification-icon new">🔔</div><div className="notification-content"><strong>No new activity</strong><p>Your donation and delivery updates will appear here automatically.</p></div></div>}
+        {latest.map((notification) => (
+          <div className="notification-item" key={notification.id}>
+            <div className={`notification-icon ${notification.type}`}>{notification.type === "route" ? "🚚" : notification.type === "done" ? "✅" : notification.type === "reserved" ? "📦" : "✓"}</div>
             <div className="notification-content">
-
-              <strong>
-                {notification.title}
-              </strong>
-
-              <p>
-                {notification.description}
-              </p>
-
-              <small>
-                {notification.time}
-              </small>
-
+              <strong>{notification.title}</strong>
+              <p>{notification.description}</p>
+              <small>{notification.time}</small>
             </div>
-
           </div>
         ))}
-
       </div>
-
-      <button className="notifications-view">
-        View all notifications →
-      </button>
-
+      <Link className="notifications-view" to="/notifications">View all notifications →</Link>
     </div>
   );
 }
