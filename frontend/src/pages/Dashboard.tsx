@@ -7,7 +7,6 @@ import RecentDonations from "../components/dashboard/RecentDonations";
 import ReceiverReviews from "../components/dashboard/ReceiverReviews";
 import Notifications from "../components/dashboard/Notifications";
 import NGOList from "../components/dashboard/NGOList";
-import AIInsights from "../components/dashboard/AIInsights";
 
 import "./Dashboard.css";
 
