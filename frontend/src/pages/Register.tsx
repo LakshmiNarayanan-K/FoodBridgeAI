@@ -1,8 +1,7 @@
-import { useState, FormEvent } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Register.css";
-
-type UserType = "" | "donor";
 
 const Register = () => {
   const navigate = useNavigate();
