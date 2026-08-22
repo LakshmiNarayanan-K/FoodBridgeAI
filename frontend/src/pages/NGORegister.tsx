@@ -50,7 +50,7 @@ const NGORegister = () => {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "NGO registration failed.");
-      navigate("/login", { state: { message: "NGO account created. Please log in." } });
+      navigate("/ngo-login", { state: { message: "NGO account created successfully. Please log in." } });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to register NGO.");
     } finally {
@@ -100,7 +100,7 @@ const NGORegister = () => {
             </div>
             <button className="ngo-register-submit" disabled={submitting}>{submitting ? "Creating NGO account..." : "Create NGO Account →"}</button>
           </form>
-          <p className="ngo-register-footer">Already registered? <Link to="/login">Sign in</Link> · <Link to="/register">Donor registration</Link></p>
+          <p className="ngo-register-footer">Already registered? <Link to="/ngo-login">Sign in</Link> · <Link to="/register">Donor registration</Link></p>
         </main>
       </div>
     </div>
